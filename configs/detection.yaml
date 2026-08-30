@@ -1,7 +1,7 @@
 # Detection model configuration
 
 player_detector:
-  model: yolov8n.pt  # Ultralytics YOLOv8 nano (COCO pre-trained)
+  model: models/yolov8n.pt  # Ultralytics YOLOv8 nano (COCO pre-trained)
   classes: [0]  # COCO class 0 = person
   confidence: 0.5
   input_size: 1280  # Downscaled from 4K

@@ -311,27 +311,40 @@ function updateDashboard(point) {
   // Scoreboard
   document.getElementById('clockDisplay').textContent = `⏱ ${formatTime(point.time_s)} / ${formatTime(timeline[timeline.length-1]?.time_s || 0)}`;
 
-  // Charts - update with visible window (last N points)
-  const windowSize = 60;
-  const start = Math.max(0, currentIdx - windowSize);
-  const visible = timeline.slice(start, currentIdx + 1);
-  const labels = visible.map(p => p.time_s.toFixed(1) + 's');
+  // Charts - show ALL timeline data, mark current position with point radius
+  const labels = timeline.map((p, i) => i % 10 === 0 ? p.time_s.toFixed(1) + 's' : '');
+  const allPossA = timeline.map(p => p.poss_a);
+  const allPossB = timeline.map(p => p.poss_b);
+  const allPlayers = timeline.map(p => p.players);
+  const allBall = timeline.map(p => p.ball);
+  const allAtkA = timeline.map(p => p.atk_a);
+  const allAtkB = timeline.map(p => p.atk_b);
+  const allDngA = timeline.map(p => p.dng_a);
+  const allDngB = timeline.map(p => p.dng_b);
+
+  // Point radius: only show dot at current position
+  const pointRadiusA = timeline.map((_, i) => i === currentIdx ? 5 : 0);
+  const pointRadiusB = timeline.map((_, i) => i === currentIdx ? 5 : 0);
 
   charts.poss.data.labels = labels;
-  charts.poss.data.datasets[0].data = visible.map(p => p.poss_a);
-  charts.poss.data.datasets[1].data = visible.map(p => p.poss_b);
+  charts.poss.data.datasets[0].data = allPossA;
+  charts.poss.data.datasets[0].pointRadius = pointRadiusA;
+  charts.poss.data.datasets[0].pointBackgroundColor = '#ff5252';
+  charts.poss.data.datasets[1].data = allPossB;
+  charts.poss.data.datasets[1].pointRadius = pointRadiusB;
+  charts.poss.data.datasets[1].pointBackgroundColor = '#448aff';
   charts.poss.update('none');
 
   charts.det.data.labels = labels;
-  charts.det.data.datasets[0].data = visible.map(p => p.players);
-  charts.det.data.datasets[1].data = visible.map(p => p.ball);
+  charts.det.data.datasets[0].data = allPlayers;
+  charts.det.data.datasets[1].data = allBall;
   charts.det.update('none');
 
   charts.atk.data.labels = labels;
-  charts.atk.data.datasets[0].data = visible.map(p => p.atk_a);
-  charts.atk.data.datasets[1].data = visible.map(p => p.atk_b);
-  charts.atk.data.datasets[2].data = visible.map(p => p.dng_a);
-  charts.atk.data.datasets[3].data = visible.map(p => p.dng_b);
+  charts.atk.data.datasets[0].data = allAtkA;
+  charts.atk.data.datasets[1].data = allAtkB;
+  charts.atk.data.datasets[2].data = allDngA;
+  charts.atk.data.datasets[3].data = allDngB;
   charts.atk.update('none');
 
   // Log significant events
@@ -375,23 +388,33 @@ function formatTime(s) {
   return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
 }
 
-// === Video sync ===
+// === Video sync — use timeupdate + requestAnimationFrame for reliable sync ===
+let lastSyncedIdx = -1;
+
 function syncToVideo() {
   if (!timeline.length || !video.duration) return;
   const t = video.currentTime;
-  // Find closest timeline point
-  let idx = 0;
-  for (let i = timeline.length - 1; i >= 0; i--) {
-    if (timeline[i].time_s <= t) { idx = i; break; }
+  // Binary search for closest timeline point
+  let lo = 0, hi = timeline.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (timeline[mid].time_s <= t) lo = mid; else hi = mid - 1;
   }
-  if (idx !== currentIdx) {
+  const idx = lo;
+  if (idx !== lastSyncedIdx) {
+    lastSyncedIdx = idx;
     currentIdx = idx;
     updateDashboard(timeline[idx]);
   }
-  // Update seek bar
   seekBar.value = (t / video.duration * 1000);
   timeDisplay.textContent = `${formatTime(t)} / ${formatTime(video.duration)}`;
 }
+
+// timeupdate fires ~4/sec during playback — most reliable sync point
+video.addEventListener('timeupdate', syncToVideo);
+
+// Also sync when seeking
+video.addEventListener('seeked', syncToVideo);
 
 // === Controls ===
 playBtn.addEventListener('click', () => {
@@ -413,9 +436,12 @@ document.querySelectorAll('.speed-btn').forEach(btn => {
   });
 });
 
-// Animation loop for smooth sync
+// Animation loop for smooth seek bar update
 function tick() {
-  if (isPlaying) syncToVideo();
+  if (!video.paused) {
+    seekBar.value = (video.currentTime / video.duration * 1000);
+    timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+  }
   requestAnimationFrame(tick);
 }
 tick();
@@ -470,6 +496,8 @@ async function loadDefaultVideo() {
     const resp = await fetch('/data/live_demo/timeline.json');
     if (resp.ok) {
       timeline = await resp.json();
+      lastSyncedIdx = -1;
+      currentIdx = 0;
       updateDashboard(timeline[0]);
     }
   } catch(e) {

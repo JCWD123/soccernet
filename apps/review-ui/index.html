@@ -388,33 +388,39 @@ function formatTime(s) {
   return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
 }
 
-// === Video sync — use timeupdate + requestAnimationFrame for reliable sync ===
+// === Sync engine: poll video.currentTime every 100ms ===
 let lastSyncedIdx = -1;
+let lastVideoTime = -1;
 
-function syncToVideo() {
-  if (!timeline.length || !video.duration) return;
+function syncTick() {
+  if (!timeline.length || !video.duration || video.paused) return;
   const t = video.currentTime;
+  if (t === lastVideoTime) return; // no progress, skip
+  lastVideoTime = t;
+
   // Binary search for closest timeline point
   let lo = 0, hi = timeline.length - 1;
   while (lo < hi) {
     const mid = (lo + hi + 1) >> 1;
     if (timeline[mid].time_s <= t) lo = mid; else hi = mid - 1;
   }
-  const idx = lo;
-  if (idx !== lastSyncedIdx) {
-    lastSyncedIdx = idx;
-    currentIdx = idx;
-    updateDashboard(timeline[idx]);
+  if (lo !== lastSyncedIdx) {
+    lastSyncedIdx = lo;
+    currentIdx = lo;
+    updateDashboard(timeline[lo]);
   }
   seekBar.value = (t / video.duration * 1000);
   timeDisplay.textContent = `${formatTime(t)} / ${formatTime(video.duration)}`;
 }
 
-// timeupdate fires ~4/sec during playback — most reliable sync point
-video.addEventListener('timeupdate', syncToVideo);
+// Poll at 10fps — reliable regardless of video events
+setInterval(syncTick, 100);
 
-// Also sync when seeking
-video.addEventListener('seeked', syncToVideo);
+// Also sync on seek
+video.addEventListener('seeked', () => {
+  lastVideoTime = -1;
+  syncTick();
+});
 
 // === Controls ===
 playBtn.addEventListener('click', () => {
@@ -436,15 +442,7 @@ document.querySelectorAll('.speed-btn').forEach(btn => {
   });
 });
 
-// Animation loop for smooth seek bar update
-function tick() {
-  if (!video.paused) {
-    seekBar.value = (video.currentTime / video.duration * 1000);
-    timeDisplay.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
-  }
-  requestAnimationFrame(tick);
-}
-tick();
+// seek bar + time display also updated by syncTick
 
 // === File handling ===
 document.getElementById('videoUpload').addEventListener('change', e => {

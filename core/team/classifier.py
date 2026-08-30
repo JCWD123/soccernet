@@ -26,12 +26,13 @@ class TeamClassifier:
         self.team_b_centroid: Optional[np.ndarray] = None
         self.is_initialized = False
 
-    def classify_frame(self, frame: np.ndarray, tracks: list) -> Dict[int, str]:
+    def classify_frame(self, frame: np.ndarray, tracks: list, ball_position=None) -> Dict[int, str]:
         """Classify all tracks in current frame.
         
         Args:
             frame: BGR image
             tracks: List of Track objects with bbox
+            ball_position: Optional (cx, cy) of ball in pixels, used to align team labels
             
         Returns:
             Dict mapping track_id -> team_id ("A", "B", or "unknown")
@@ -61,6 +62,27 @@ class TeamClassifier:
         if not self.is_initialized:
             all_features = np.array([f for _, f, _ in features])
             self._initialize_centroids(all_features)
+            # After init, align labels: player nearest to ball should be Team A
+            if ball_position is not None and self.is_initialized:
+                bx, by = ball_position
+                nearest_track = None
+                min_dist = float('inf')
+                for tid, feat, trk in features:
+                    px, py = trk.pixel_center
+                    d = ((bx-px)**2 + (by-py)**2)**0.5
+                    if d < min_dist:
+                        min_dist = d
+                        nearest_track = trk
+                if nearest_track:
+                    nf = self._extract_color_feature(
+                        frame[max(0,int(nearest_track.bbox[1])):int(nearest_track.bbox[3]),
+                              max(0,int(nearest_track.bbox[0])):int(nearest_track.bbox[2])]
+                    )
+                    dist_a = np.linalg.norm(nf - self.team_a_centroid)
+                    dist_b = np.linalg.norm(nf - self.team_b_centroid)
+                    # If nearest-to-ball player is closer to centroid B, swap labels
+                    if dist_b < dist_a:
+                        self.team_a_centroid, self.team_b_centroid = self.team_b_centroid, self.team_a_centroid
 
         # Classify each track
         for track_id, feature, track in features:
@@ -101,6 +123,8 @@ class TeamClassifier:
         if len(features) >= 2:
             from scipy.cluster.vq import kmeans2
             try:
+                # Use fixed seed for reproducible team assignments
+                np.random.seed(42)
                 centroids, labels = kmeans2(features, 2, minit='points')
                 self.team_a_centroid = centroids[0]
                 self.team_b_centroid = centroids[1]

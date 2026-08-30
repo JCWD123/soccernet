@@ -124,8 +124,12 @@ class MatchEngine:
         player_tracks = [t for t in tracks if t.class_name == "player"]
         ball_tracks = [t for t in tracks if t.class_name == "ball"]
 
-        # 3. Team classification
-        team_assignments = self.team_classifier.classify_frame(frame, player_tracks)
+        # 3. Team classification — pass ball position so classifier can align labels
+        ball_pos_for_team = None
+        if ball_tracks:
+            best_ball = max(ball_tracks, key=lambda t: t.confidence)
+            ball_pos_for_team = best_ball.pixel_center
+        team_assignments = self.team_classifier.classify_frame(frame, player_tracks, ball_position=ball_pos_for_team)
         for track in player_tracks:
             track.team_id = team_assignments.get(track.track_id, "unknown")
 

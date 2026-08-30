@@ -67,15 +67,32 @@ class PlayerDetector:
         )
 
         detections = []
+        frame_area = frame.shape[0] * frame.shape[1]
         for r in results:
             if r.boxes is None:
                 continue
             for box in r.boxes:
                 xyxy = box.xyxy[0].cpu().numpy()
+                w = xyxy[2] - xyxy[0]
+                h = xyxy[3] - xyxy[1]
+                area = w * h
+                aspect = h / max(w, 1)
+                
+                # Filter false positives:
+                # - Too large (>10% of frame) = camera/field artifact
+                # - Too small (<10000 px area) = noise / distant objects
+                # - Aspect ratio <1.5 = not a standing person
+                if area > frame_area * 0.10:
+                    continue
+                if area < 10000:
+                    continue
+                if aspect < 1.5:
+                    continue
+                    
                 det = Detection(
                     bbox=xyxy,
                     confidence=float(box.conf[0]),
-                    class_id=0,  # All detected as player; team/rule later
+                    class_id=0,
                     class_name="player"
                 )
                 detections.append(det)

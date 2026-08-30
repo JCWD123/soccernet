@@ -85,7 +85,7 @@ def cmd_demo(args):
         # Generate a simple synthetic frame
         frame = np.random.randint(50, 200, (h, w, 3), dtype=np.uint8)
         # Draw green field in lower portion
-        frame[h//3:, :, 1] = 120 + np.random.randint(-20, 20, (h - h//3, w), dtype=np.uint8)
+        frame[h//3:, :, 1] = np.clip(120 + np.random.randint(0, 40, (h - h//3, w), dtype=np.uint8) - 20, 0, 255).astype(np.uint8)
 
         result = engine.process_frame(frame, timestamp_ms=i * 40)  # 25fps = 40ms/frame
 

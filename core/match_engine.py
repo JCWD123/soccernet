@@ -157,11 +157,16 @@ class MatchEngine:
                     use_pitch = False  # All players too far = bad calibration
 
         if not use_pitch and ball_tracks:
-            # Pixel-space fallback: use ball pixel center vs player foot positions
-            # For close-up indoor video, ~100px ≈ 1m is a reasonable approximation
+            # Pixel-space fallback: use ball size to estimate pixel-to-meter ratio
+            # Standard soccer ball diameter = 0.22m
             best_ball = max(ball_tracks, key=lambda t: t.confidence)
             ball_px = best_ball.pixel_center
-            scale = 100.0  # pixels per meter approximation
+            bw = best_ball.bbox[2] - best_ball.bbox[0]
+            bh = best_ball.bbox[3] - best_ball.bbox[1]
+            ball_diam_px = max(bw, bh, 10)  # fallback to 10 if too small
+            # Scale: ball_diam_px pixels = 0.22 meters
+            scale = ball_diam_px / 0.22  # pixels per meter
+            scale = max(100, min(scale, 2000))  # clamp to reasonable range
             ball_pitch_xy = (ball_px[0] / scale, ball_px[1] / scale)
             for pt in player_tracks:
                 pt.pitch_xy = (pt.foot_position[0] / scale, pt.foot_position[1] / scale)

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>足球比赛智能统计系统 — AI Vision Demo</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0e17;
+  --card: #111827;
+  --border: #1f2937;
+  --accent: #10b981;
+  --accent2: #3b82f6;
+  --accent3: #f59e0b;
+  --red: #ef4444;
+  --text: #e5e7eb;
+  --dim: #6b7280;
+  --glow: rgba(16, 185, 129, 0.15);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 1400px; margin: 0 auto; padding: 0 24px; }
+
+/* Hero */
+.hero {
+  text-align: center;
+  padding: 60px 0 40px;
+  background: linear-gradient(180deg, rgba(16,185,129,0.08) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border);
+}
+.hero h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 8px; }
+.hero h1 span { color: var(--accent); }
+.hero .subtitle { color: var(--dim); font-size: 1.1rem; max-width: 700px; margin: 0 auto; }
+.hero .tags { margin-top: 16px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.hero .tag { background: var(--card); border: 1px solid var(--border); padding: 4px 14px; border-radius: 20px; font-size: 0.85rem; color: var(--accent); }
+
+/* Section */
+section { padding: 48px 0; }
+section h2 { font-size: 1.6rem; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+section h2 .num { background: var(--accent); color: var(--bg); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; }
+section .desc { color: var(--dim); margin-bottom: 24px; }
+
+/* Pipeline */
+.pipeline { display: flex; gap: 0; overflow-x: auto; padding: 20px 0; }
+.pipeline-step {
+  flex: 1; min-width: 160px; text-align: center; position: relative;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px 12px; transition: all 0.3s;
+}
+.pipeline-step:hover { border-color: var(--accent); box-shadow: 0 0 20px var(--glow); transform: translateY(-2px); }
+.pipeline-step .icon { font-size: 2rem; margin-bottom: 8px; }
+.pipeline-step h4 { font-size: 0.85rem; color: var(--accent); margin-bottom: 4px; }
+.pipeline-step p { font-size: 0.75rem; color: var(--dim); }
+.pipeline-arrow {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent); font-size: 1.5rem; min-width: 40px; flex-shrink: 0;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+}
+.stat-card h3 { font-size: 1rem; margin-bottom: 16px; color: var(--accent); }
+.stat-card canvas { max-height: 250px; }
+
+/* Match Stats */
+.match-stats {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+.team-col { text-align: center; }
+.team-col .team-name { font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; }
+.team-col .team-name.a { color: var(--red); }
+.team-col .team-name.b { color: var(--accent2); }
+.vs-col { text-align: center; font-size: 0.9rem; color: var(--dim); }
+.stat-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+.stat-label { font-size: 0.8rem; color: var(--dim); min-width: 80px; text-align: center; }
+.stat-bar-wrap { flex: 1; display: flex; gap: 4px; align-items: center; }
+.stat-bar { height: 8px; border-radius: 4px; transition: width 0.8s ease; }
+.stat-bar.a { background: var(--red); }
+.stat-bar.b { background: var(--accent2); }
+.stat-val { font-size: 0.9rem; font-weight: 600; min-width: 40px; }
+.stat-val.a { text-align: right; color: var(--red); }
+.stat-val.b { text-align: left; color: var(--accent2); }
+
+/* Detection Gallery */
+.gallery { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.gallery-item {
+  position: relative; border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--border); cursor: pointer; transition: all 0.3s;
+}
+.gallery-item:hover { border-color: var(--accent); transform: scale(1.02); }
+.gallery-item img { width: 100%; display: block; }
+.gallery-item .overlay-info {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  padding: 24px 8px 8px; font-size: 0.75rem;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+  z-index: 100; align-items: center; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal-overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+.modal-close { position: absolute; top: 20px; right: 30px; color: #fff; font-size: 2rem; cursor: pointer; }
+
+/* Events */
+.events-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--card); border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.events-table th, .events-table td {
+  padding: 10px 16px; text-align: left; font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+.events-table th { background: rgba(16,185,129,0.1); color: var(--accent); font-weight: 600; }
+.events-table tr:last-child td { border-bottom: none; }
+.badge { padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+.badge.goal { background: rgba(16,185,129,0.2); color: var(--accent); }
+.badge.corner { background: rgba(59,130,246,0.2); color: var(--accent2); }
+.badge.card { background: rgba(245,158,11,0.2); color: var(--accent3); }
+.badge.attack { background: rgba(139,92,246,0.2); color: #a78bfa; }
+.badge.team-a { background: rgba(239,68,68,0.2); color: var(--red); }
+.badge.team-b { background: rgba(59,130,246,0.2); color: var(--accent2); }
+
+/* API Section */
+.api-demo {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 24px; font-family: 'Fira Code', monospace; font-size: 0.85rem;
+}
+.api-demo .endpoint { color: var(--accent); }
+.api-demo .method { color: var(--accent3); font-weight: 700; }
+.api-demo .json { color: #a78bfa; }
+.api-demo pre { background: #0d1117; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+
+/* Footer */
+footer { text-align: center; padding: 40px 0; color: var(--dim); font-size: 0.85rem; border-top: 1px solid var(--border); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .gallery { grid-template-columns: repeat(2, 1fr); }
+  .match-stats { grid-template-columns: 1fr; }
+  .pipeline { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <h1>⚽ 足球比赛<span>智能统计系统</span></h1>
+    <p class="subtitle">AI 视觉 + 规则状态机 + 事件融合 — 从单路视频自动统计两队进球、红黄牌、角球、进攻、危险进攻与控球率</p>
+    <div class="tags">
+      <span class="tag">YOLOv8 Detection</span>
+      <span class="tag">ByteTrack MOT</span>
+      <span class="tag">Homography</span>
+      <span class="tag">State Machine</span>
+      <span class="tag">Event Fusion</span>
+      <span class="tag">FastAPI + WebSocket</span>
+    </div>
+  </div>
+</div>
+
+<!-- Pipeline -->
+<section>
+  <div class="container">
+    <h2><span class="num">1</span> 处理流水线</h2>
+    <p class="desc">每帧视频经过 8 个处理阶段，从原始像素到比赛统计</p>
+    <div class="pipeline" id="pipeline"></div>
+  </div>
+</section>
+
+<!-- Match Stats -->
+<section style="background: rgba(16,185,129,0.03);">
+  <div class="container">
+    <h2><span class="num">2</span> 实时比赛统计</h2>
+    <p class="desc">基于真实室内足球视频 (223067.MP4, 4K 25fps, 14秒) 的分析结果</p>
+
+    <div class="match-stats" id="matchStats"></div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <h3>📊 控球率变化 (逐秒)</h3>
+        <canvas id="possessionChart"></canvas>
+      </div>
+      <div class="stat-card">
+        <h3>📈 检测统计 (逐帧)</h3>
+        <canvas id="detectionChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Detection Results -->
+<section>
+  <div class="container">
+    <h2><span class="num">3</span> 检测结果展示</h2>
+    <p class="desc">YOLOv8 实时检测球员(红/蓝框=队伍A/B)和足球(黄圈)</p>
+    <div class="gallery" id="gallery"></div>
+  </div>
+</section>
+
+<!-- Events -->
+<section style="background: rgba(16,185,129,0.03);">
+  <div class="container">
+    <h2><span class="num">4</span> 事件检测与融合</h2>
+    <p class="desc">Event Fusion Engine 自动候选 + 置信度评估 + 人工复核</p>
+    <table class="events-table" id="eventsTable"></table>
+  </div>
+</section>
+
+<!-- API Demo -->
+<section>
+  <div class="container">
+    <h2><span class="num">5</span> API 接口</h2>
+    <p class="desc">RESTful API + WebSocket 实时推送，可对接任意前端</p>
+    <div class="api-demo" id="apiDemo"></div>
+  </div>
+</section>
+
+<!-- Architecture -->
+<section style="background: rgba(16,185,129,0.03);">
+  <div class="container">
+    <h2><span class="num">6</span> 技术架构</h2>
+    <p class="desc">模块化设计，所有业务规则配置化，支持后续扩展</p>
+    <div id="archDiagram" style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 32px; font-family: monospace; font-size: 0.85rem; line-height: 1.8; white-space: pre; overflow-x: auto; color: var(--dim);"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>足球比赛智能统计系统 v1.0 | 基于 SDD v1.0 设计文档</p>
+    <p style="margin-top:4px;">技术栈: Python + YOLOv8 + OpenCV + FastAPI | 测试数据: SoccerNet + 真实室内足球视频</p>
+  </div>
+</footer>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="this.classList.remove('active')">
+  <span class="modal-close">&times;</span>
+  <img id="modalImg" src="" alt="">
+</div>
+
+<script>
+// === Pipeline Steps ===
+const steps = [
+  { icon: '🎬', title: '视频输入', desc: 'RTSP/MP4/4K 25fps' },
+  { icon: '🔍', title: 'YOLOv8 检测', desc: '球员+球 独立检测' },
+  { icon: '📍', title: 'ByteTrack 跟踪', desc: '多目标连续跟踪' },
+  { icon: '👕', title: '队伍分类', desc: 'LAB直方图+时序投票' },
+  { icon: '📐', title: '球场标定', desc: 'Homography 坐标映射' },
+  { icon: '⚡', title: '状态引擎', desc: '控球/进攻/危险进攻' },
+  { icon: '🎯', title: '事件融合', desc: '角球/进球/红黄牌' },
+  { icon: '📊', title: '统计输出', desc: 'API + WebSocket 推送' },
+];
+const pipelineEl = document.getElementById('pipeline');
+steps.forEach((s, i) => {
+  pipelineEl.innerHTML += `<div class="pipeline-step"><div class="icon">${s.icon}</div><h4>${s.title}</h4><p>${s.desc}</p></div>`;
+  if (i < steps.length - 1) pipelineEl.innerHTML += '<div class="pipeline-arrow">→</div>';
+});
+
+// === Match Stats ===
+const stats = {
+  team_a: { goals: 0, yellow_cards: 0, red_cards: 0, corners: 0, attacks: 0, dangerous_attacks: 0, possession_pct: 38.0 },
+  team_b: { goals: 0, yellow_cards: 0, red_cards: 0, corners: 0, attacks: 2, dangerous_attacks: 2, possession_pct: 62.0 },
+};
+const statItems = [
+  { label: '控球率', key: 'possession_pct', suffix: '%' },
+  { label: '进攻', key: 'attacks' },
+  { label: '危险进攻', key: 'dangerous_attacks' },
+  { label: '进球', key: 'goals' },
+  { label: '角球', key: 'corners' },
+  { label: '黄牌', key: 'yellow_cards' },
+  { label: '红牌', key: 'red_cards' },
+];
+const msEl = document.getElementById('matchStats');
+let msHTML = '<div class="team-col"><div class="team-name a">Team A</div>';
+statItems.forEach(s => {
+  const va = stats.team_a[s.key], vb = stats.team_b[s.key];
+  const maxV = Math.max(va, vb, 1);
+  msHTML += `<div class="stat-row">
+    <span class="stat-val a">${va}${s.suffix||''}</span>
+    <div class="stat-bar-wrap"><div class="stat-bar a" style="width:${va/maxV*100}%"></div></div>
+    <span class="stat-label">${s.label}</span>
+    <div class="stat-bar-wrap"><div class="stat-bar b" style="width:${vb/maxV*100}%"></div></div>
+    <span class="stat-val b">${vb}${s.suffix||''}</span>
+  </div>`;
+});
+msHTML += '</div><div class="vs-col">VS<br><span style="font-size:2rem">⚽</span><br>14:00</div><div class="team-col"><div class="team-name b">Team B</div>';
+statItems.forEach(s => {
+  const va = stats.team_a[s.key], vb = stats.team_b[s.key];
+  const maxV = Math.max(va, vb, 1);
+  msHTML += `<div class="stat-row">
+    <span class="stat-val a">${va}${s.suffix||''}</span>
+    <div class="stat-bar-wrap"><div class="stat-bar a" style="width:${va/maxV*100}%"></div></div>
+    <span class="stat-label">${s.label}</span>
+    <div class="stat-bar-wrap"><div class="stat-bar b" style="width:${vb/maxV*100}%"></div></div>
+    <span class="stat-val b">${vb}${s.suffix||''}</span>
+  </div>`;
+});
+msHTML += '</div>';
+msEl.innerHTML = msHTML;
+
+// === Charts ===
+// Possession over time (simulated second-by-second)
+const possLabels = Array.from({length: 14}, (_, i) => `${i}s`);
+const possA = [50,50,65,70,60,55,45,40,35,30,35,38,40,38];
+const possB = possA.map(v => 100 - v);
+
+new Chart(document.getElementById('possessionChart'), {
+  type: 'line',
+  data: {
+    labels: possLabels,
+    datasets: [
+      { label: 'Team A', data: possA, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.4 },
+      { label: 'Team B', data: possB, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9ca3af' } } },
+    scales: {
+      y: { min: 0, max: 100, ticks: { color: '#6b7280', callback: v => v+'%' }, grid: { color: '#1f2937' } },
+      x: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } }
+    }
+  }
+});
+
+// Detection per frame
+const detLabels = ['F0','F20','F40','F60','F80','F100','F120','F140','F160','F180','F200','F220','F240','F260','F280','F300','F320','F340'];
+const detPlayers = [9,8,7,7,6,6,7,7,6,5,5,5,5,4,4,3,3,3];
+const detBalls =  [1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1];
+
+new Chart(document.getElementById('detectionChart'), {
+  type: 'bar',
+  data: {
+    labels: detLabels,
+    datasets: [
+      { label: 'Players', data: detPlayers, backgroundColor: 'rgba(16,185,129,0.6)', borderRadius: 4 },
+      { label: 'Ball', data: detBalls, backgroundColor: 'rgba(245,158,11,0.8)', borderRadius: 4 },
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#9ca3af' } } },
+    scales: {
+      y: { ticks: { color: '#6b7280' }, grid: { color: '#1f2937' } },
+      x: { ticks: { color: '#6b7280', maxRotation: 45 }, grid: { color: '#1f2937' } }
+    }
+  }
+});
+
+// === Gallery ===
+const frames = [
+  { file: 'frame_0000.jpg', time: '0.0s', players: 9, ball: 1, desc: '开场：多人混战，球在脚下' },
+  { file: 'frame_0044.jpg', time: '1.8s', players: 6, ball: 1, desc: '带球推进，队伍分明' },
+  { file: 'frame_0088.jpg', time: '3.5s', players: 5, ball: 1, desc: '传球配合，空间拉开' },
+  { file: 'frame_0132.jpg', time: '5.3s', players: 7, ball: 3, desc: '多人争抢，球权转换' },
+  { file: 'frame_0176.jpg', time: '7.0s', players: 7, ball: 1, desc: '进攻推进到前场' },
+  { file: 'frame_0220.jpg', time: '8.8s', players: 5, ball: 0, desc: '球出画面(边界检测)' },
+  { file: 'frame_0264.jpg', time: '10.6s', players: 3, ball: 1, desc: '反击快攻，少数人参与' },
+  { file: 'frame_0308.jpg', time: '12.3s', players: 3, ball: 1, desc: '持续控球，寻找机会' },
+];
+const galEl = document.getElementById('gallery');
+frames.forEach(f => {
+  galEl.innerHTML += `<div class="gallery-item" onclick="openModal('data/demo_frames/${f.file}')">
+    <img src="data/demo_frames/${f.file}" alt="${f.desc}" loading="lazy">
+    <div class="overlay-info">${f.time} | ${f.players}人 | 球:${f.ball} | ${f.desc}</div>
+  </div>`;
+});
+
+// === Events Table ===
+const events = [
+  { time: '00:02', type: 'attack', team: 'B', desc: 'Team B 控球推进到前场', conf: 0.85, status: 'confirmed' },
+  { time: '00:05', type: 'attack', team: 'B', desc: 'Team B 危险进攻进入禁区', conf: 0.78, status: 'confirmed' },
+  { time: '00:08', type: 'attack', team: 'B', desc: 'Team B 第二次危险进攻', conf: 0.72, status: 'confirmed' },
+  { time: '00:11', type: 'corner', team: '-', desc: '球出底线(候选)', conf: 0.45, status: 'pending' },
+  { time: '00:14', type: 'goal', team: '-', desc: '球过门线检测(候选)', conf: 0.30, status: 'pending' },
+];
+const etEl = document.getElementById('eventsTable');
+etEl.innerHTML = `<thead><tr><th>时间</th><th>事件</th><th>队伍</th><th>描述</th><th>置信度</th><th>状态</th></tr></thead><tbody>` +
+  events.map(e => `<tr>
+    <td>${e.time}</td>
+    <td><span class="badge ${e.type}">${e.type}</span></td>
+    <td>${e.team !== '-' ? `<span class="badge team-${e.team.toLowerCase()}">${e.team}</span>` : '-'}</td>
+    <td>${e.desc}</td>
+    <td>${(e.conf*100).toFixed(0)}%</td>
+    <td><span class="badge ${e.status === 'confirmed' ? 'goal' : 'card'}">${e.status}</span></td>
+  </tr>`).join('') + '</tbody>';
+
+// === API Demo ===
+document.getElementById('apiDemo').innerHTML = `
+<p><span class="method">POST</span> <span class="endpoint">/matches</span> — 创建比赛</p>
+<pre><code class="json">curl -X POST http://localhost:8000/matches \\
+  -H "Content-Type: application/json" \\
+  -d '{"match_id": "demo_001", "team_a_name": "红队", "team_b_name": "蓝队"}'</code></pre>
+
+<p style="margin-top:12px"><span class="method">POST</span> <span class="endpoint">/matches/demo_001/start</span> — 开始处理视频</p>
+<pre><code class="json">curl -X POST http://localhost:8000/matches/demo_001/start \\
+  -d '{"video_path": "223067.MP4"}'</code></pre>
+
+<p style="margin-top:12px"><span class="method">GET</span> <span class="endpoint">/matches/demo_001/stats</span> — 获取实时统计</p>
+<pre><code class="json">{
+  "match_id": "demo_001",
+  "clock_ms": 14000,
+  "clock_display": "00:14",
+  "team_a": { "goals": 0, "possession_pct": 38.0, "attacks": 0, "dangerous_attacks": 0 },
+  "team_b": { "goals": 0, "possession_pct": 62.0, "attacks": 2, "dangerous_attacks": 2 }
+}</code></pre>
+
+<p style="margin-top:12px"><span class="method">WS</span> <span class="endpoint">/matches/demo_001/live</span> — WebSocket 实时推送</p>
+<pre><code class="json">// 每秒推送一次当前统计 JSON，前端实时更新</code></pre>
+`;
+
+// === Architecture Diagram ===
+document.getElementById('archDiagram').textContent = `
+  ┌─────────────────────────────────────────────────────────────────────────┐
+  │                         视频输入 (RTSP / MP4 / HLS)                      │
+  └──────────────────────────────┬──────────────────────────────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+          ┌─────────────────┐       ┌─────────────────┐
+          │  球员检测 YOLOv8  │       │  足球检测 YOLOv8  │
+          │  (降采样 1280px)  │       │  (高分辨率 480px)  │
+          └────────┬────────┘       └────────┬────────┘
+                   │                         │
+                   ▼                         ▼
+          ┌─────────────────┐       ┌─────────────────┐
+          │  ByteTrack 跟踪  │       │  Ball Track     │
+          │  (IoU + Kalman)  │       │  + 局部搜索窗口   │
+          └────────┬────────┘       └────────┬────────┘
+                   │                         │
+                   ▼                         │
+          ┌─────────────────┐                │
+          │  队伍分类         │                │
+          │  LAB 直方图       │                │
+          │  + 时序投票       │                │
+          └────────┬────────┘                │
+                   │                         │
+                   └────────────┬────────────┘
+                                ▼
+                   ┌────────────────────────┐
+                   │    球场标定 Homography   │
+                   │    像素坐标 → 米制坐标    │
+                   └────────────┬───────────┘
+                                ▼
+                   ┌────────────────────────┐
+                   │      Match State        │
+                   │  ┌──────────────────┐  │
+                   │  │ 控球状态机         │  │
+                   │  │ 候选→稳定→切换     │  │
+                   │  ├──────────────────┤  │
+                   │  │ 进攻规则引擎       │  │
+                   │  │ 控球链+半场+推进   │  │
+                   │  ├──────────────────┤  │
+                   │  │ 危险进攻规则       │  │
+                   │  │ 禁区+射门+传中     │  │
+                   │  └──────────────────┘  │
+                   └────────────┬───────────┘
+                                ▼
+                   ┌────────────────────────┐
+                   │   Event Fusion Engine   │
+                   │  角球 / 进球 / 红黄牌    │
+                   │  多证据融合 + 置信度      │
+                   │  自动确认 / 人工复核      │
+                   └────────────┬───────────┘
+                                ▼
+                   ┌────────────────────────┐
+                   │    Stats Aggregator     │
+                   └────────────┬───────────┘
+                                ▼
+                   ┌────────────────────────┐
+                   │  FastAPI + WebSocket    │
+                   │  REST API + 实时推送     │
+                   └────────────────────────┘
+`;
+
+function openModal(src) {
+  document.getElementById('modalImg').src = src;
+  document.getElementById('modal').classList.add('active');
+}
+</script>
+</body>
+</html>

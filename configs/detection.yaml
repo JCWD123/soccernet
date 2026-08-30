@@ -19,7 +19,7 @@ ball_detector:
 
 tracking:
   tracker: bytetrack.yaml  # bytetrack.yaml | ocsort.yaml | botsort.yaml
-  track_buffer: 30  # frames to keep lost tracks
+  track_buffer: 90  # frames to keep lost tracks (increased for stability)
 
 team_classification:
   method: color_histogram  # color_histogram | learned

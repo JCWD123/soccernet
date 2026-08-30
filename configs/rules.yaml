@@ -3,8 +3,8 @@
 
 possession:
   max_player_ball_distance_m: 2.3
-  switch_hold_ms: 1500
-  unknown_timeout_ms: 2000
+  switch_hold_ms: 5000
+  unknown_timeout_ms: 3000
   # States: CONTROLLED / CONTESTED / LOOSE
   contested_distance_m: 4.0
 

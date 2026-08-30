@@ -141,7 +141,31 @@ class MatchEngine:
             best_ball = max(ball_tracks, key=lambda t: t.confidence)
             ball_pitch_xy = self.calibrator.pixel_to_pitch(best_ball.pixel_center)
 
-        # 5. Possession
+        # 5. Possession - use pitch coords if available, else pixel-space fallback
+        # Check if pitch-space distances are reasonable (< 5m = likely valid calibration)
+        use_pitch = ball_pitch_xy is not None
+        if use_pitch:
+            min_dist = float('inf')
+            for pt in player_tracks:
+                if pt.pitch_xy:
+                    dist = ((ball_pitch_xy[0]-pt.pitch_xy[0])**2 + (ball_pitch_xy[1]-pt.pitch_xy[1])**2)**0.5
+                    min_dist = min(min_dist, dist)
+                    if dist < 5:  # Close enough = calibration is valid
+                        break
+            else:
+                if min_dist > 5:
+                    use_pitch = False  # All players too far = bad calibration
+
+        if not use_pitch and ball_tracks:
+            # Pixel-space fallback: use ball pixel center vs player foot positions
+            # For close-up indoor video, ~100px ≈ 1m is a reasonable approximation
+            best_ball = max(ball_tracks, key=lambda t: t.confidence)
+            ball_px = best_ball.pixel_center
+            scale = 100.0  # pixels per meter approximation
+            ball_pitch_xy = (ball_px[0] / scale, ball_px[1] / scale)
+            for pt in player_tracks:
+                pt.pitch_xy = (pt.foot_position[0] / scale, pt.foot_position[1] / scale)
+
         possession = self.possession_engine.update(player_tracks, ball_pitch_xy, timestamp_ms)
 
         # 6. Attack
@@ -265,13 +289,24 @@ class MatchEngine:
         """Draw annotations on frame for visualization."""
         import cv2
         annotated = frame.copy()
+        h, w = annotated.shape[:2]
+        scale = w / 1280  # Scale font for resolution
 
-        # Draw stats overlay
+        # Draw stats overlay with semi-transparent background
         stats = result.get("stats", {})
         team_a = stats.get("team_a", {})
         team_b = stats.get("team_b", {})
 
-        y_offset = 30
+        # Dark overlay for stats
+        overlay = annotated.copy()
+        cv2.rectangle(overlay, (10, 10), (int(500*scale), int(280*scale)), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.6, annotated, 0.4, 0, annotated)
+
+        y_offset = int(40 * scale)
+        font_scale = 0.7 * scale
+        thick = max(1, int(2 * scale))
+        gap = int(32 * scale)
+
         texts = [
             f"Team A: Goals={team_a.get('goals',0)} Poss={team_a.get('possession_pct',50)}%",
             f"  ATK={team_a.get('attacks',0)} DNG={team_a.get('dangerous_attacks',0)}",
@@ -284,9 +319,22 @@ class MatchEngine:
         ]
 
         for text in texts:
-            cv2.putText(annotated, text, (10, y_offset),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            y_offset += 25
+            cv2.putText(annotated, text, (int(20*scale), y_offset),
+                       cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thick)
+            y_offset += gap
+
+        # Draw player/team tracks
+        for track in self.tracker.get_active_tracks():
+            if track.class_name == "player":
+                x1, y1, x2, y2 = track.bbox.astype(int)
+                color = (0, 0, 255) if track.team_id == "A" else (255, 200, 0)  # Red vs Yellow
+                cv2.rectangle(annotated, (x1, y1), (x2, y2), color, max(1, int(2*scale)))
+                label = f"{track.team_id}"
+                cv2.putText(annotated, label, (x1, y1-5), cv2.FONT_HERSHEY_SIMPLEX, font_scale*0.6, color, thick)
+            elif track.class_name == "ball":
+                cx, cy = int(track.pixel_center[0]), int(track.pixel_center[1])
+                cv2.circle(annotated, (cx, cy), int(15*scale), (0, 255, 255), -1)
+                cv2.putText(annotated, "BALL", (cx+20, cy), cv2.FONT_HERSHEY_SIMPLEX, font_scale*0.5, (0, 255, 255), thick)
 
         return annotated
 

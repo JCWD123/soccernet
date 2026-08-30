@@ -8,13 +8,13 @@ player_detector:
   device: auto  # auto | cpu | cuda:0
 
 ball_detector:
-  model: yolov8n.pt  # Same model, class 32 = sports ball
+  model: models/yolov8n.pt  # Same model, class 32 = sports ball
   classes: [32]  # COCO class 32 = sports ball
-  confidence: 0.3  # Lower threshold for small ball
+  confidence: 0.2  # Lower threshold for small ball
   high_confidence: 0.6  # Direct accept
-  input_size: 640  # Per tile
+  input_size: 480  # Per tile - smaller works better for ball detection
   device: auto
-  use_tiling: true  # Tiled inference for high-res
+  use_tiling: false  # Disable tiling - ball at tile boundaries gets missed. Use whole-frame detection.
   search_window_expansion: 2.0  # x bbox size for local search
 
 tracking:

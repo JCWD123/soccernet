@@ -78,15 +78,18 @@ class PlayerDetector:
                 area = w * h
                 aspect = h / max(w, 1)
                 
-                # Filter false positives:
-                # - Too large (>10% of frame) = camera/field artifact
-                # - Too small (<10000 px area) = noise / distant objects
-                # - Aspect ratio <1.5 = not a standing person
-                if area > frame_area * 0.10:
+                # Filter false positives for close-up indoor video:
+                # - Too large (>5% of frame) = camera/field artifact
+                # - Too small (<20000 px area) = noise / distant objects
+                # - Aspect ratio not in 1.8-4.5 = not a standing person
+                # - Low confidence (<0.5) = uncertain detection
+                if conf < 0.5:
                     continue
-                if area < 10000:
+                if area > frame_area * 0.05:
                     continue
-                if aspect < 1.5:
+                if area < 20000:
+                    continue
+                if aspect < 1.8 or aspect > 4.5:
                     continue
                     
                 det = Detection(

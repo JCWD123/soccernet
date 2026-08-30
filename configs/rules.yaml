@@ -1,0 +1,48 @@
+# Football Intelligence - Rules Configuration
+# All thresholds are configurable; these are SDD v1.0 defaults
+
+possession:
+  max_player_ball_distance_m: 2.3
+  switch_hold_ms: 600
+  unknown_timeout_ms: 1200
+  # States: CONTROLLED / CONTESTED / LOOSE
+  contested_distance_m: 4.0
+
+attack:
+  require_attacking_half: true
+  min_forward_progress_m: 8.0
+  end_on_possession_loss: true
+  timeout_without_progress_ms: 15000
+  # Once an attack ends, minimum gap before counting next
+  attack_cooldown_ms: 3000
+
+dangerous_attack:
+  one_per_attack: true
+  final_distance_to_goal_m: 30.0
+  penalty_area_is_dangerous: true
+  shot_is_dangerous: true
+  cross_is_dangerous: true
+  # Central channel width in meters (centered on pitch y=34m)
+  central_channel_half_width_m: 15.0
+
+corner:
+  corner_zone_radius_m: 5.0
+  min_stop_duration_ms: 500
+
+goal:
+  ball_crosses_goal_line: true
+  center_kickoff_after: true
+  event_window_s: 30.0
+  auto_confirm_threshold: 0.90
+
+card:
+  auto_confirm_threshold: 0.95
+  # Fixed panoramic: default to manual review
+  default_to_review: true
+
+event_review:
+  goal_auto_confirm: 0.90
+  corner_auto_confirm: 0.85
+  card_auto_confirm: 0.95
+  # Pending -> confirmed/rejected timeout (for review UI)
+  review_timeout_s: 300

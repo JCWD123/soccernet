@@ -1,0 +1,31 @@
+# Detection model configuration
+
+player_detector:
+  model: yolov8n.pt  # Ultralytics YOLOv8 nano (COCO pre-trained)
+  classes: [0]  # COCO class 0 = person
+  confidence: 0.5
+  input_size: 1280  # Downscaled from 4K
+  device: auto  # auto | cpu | cuda:0
+
+ball_detector:
+  model: yolov8n.pt  # Same model, class 32 = sports ball
+  classes: [32]  # COCO class 32 = sports ball
+  confidence: 0.3  # Lower threshold for small ball
+  high_confidence: 0.6  # Direct accept
+  input_size: 640  # Per tile
+  device: auto
+  use_tiling: true  # Tiled inference for high-res
+  search_window_expansion: 2.0  # x bbox size for local search
+
+tracking:
+  tracker: bytetrack.yaml  # bytetrack.yaml | ocsort.yaml | botsort.yaml
+  track_buffer: 30  # frames to keep lost tracks
+
+team_classification:
+  method: color_histogram  # color_histogram | learned
+  histogram_space: lab  # LAB color space
+  vote_window: 30  # frames for temporal majority vote
+  min_confidence: 0.6
+  # Optional: pre-set team colors (RGB) from UI seed selection
+  team_a_color_seed: null
+  team_b_color_seed: null

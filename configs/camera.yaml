@@ -1,0 +1,22 @@
+# Camera configuration - to be calibrated at install time
+# These are defaults; actual values set via calibration tool
+
+camera:
+  id: cam_001
+  resolution: [3840, 2160]  # 4K
+  fps: 25
+  type: fixed_high  # fixed_high | broadcast | ptz
+
+# Homography matrix (image pixels -> pitch meters)
+# Set by calibration tool: user clicks 8-12 field line intersections
+calibration:
+  H_matrix: null  # Will be set after calibration
+  image_points: []  # Pixel coordinates of calibration points
+  pitch_points: []  # Corresponding pitch coordinates in meters
+  calibrated: false
+
+# ROI for ball detection (high-res tiles)
+ball_roi:
+  enabled: true
+  tile_size: [960, 540]  # 2x2 tiles from 4K
+  overlap: 100  # pixels overlap between tiles

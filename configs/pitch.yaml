@@ -1,0 +1,85 @@
+# Pitch dimensions and zone definitions
+# FIFA standard: 105m x 68m
+
+dimensions:
+  length_m: 105.0
+  width_m: 68.0
+  center_x_m: 52.5
+  center_y_m: 34.0
+
+zones:
+  # x ranges: 0 = left goal line, 105 = right goal line
+  attacking_half_a:
+    x_min: 52.5
+    x_max: 105.0
+  attacking_half_b:
+    x_min: 0.0
+    x_max: 52.5
+  # Final third (35m from opponent goal)
+  final_third_a:
+    x_min: 70.0
+    x_max: 105.0
+  final_third_b:
+    x_min: 0.0
+    x_max: 35.0
+  # Penalty areas (standard 16.5m from goal line, 40.3m wide)
+  penalty_area_a:
+    x_min: 88.5
+    x_max: 105.0
+    y_min: 13.85
+    y_max: 54.15
+  penalty_area_b:
+    x_min: 0.0
+    x_max: 16.5
+    y_min: 13.85
+    y_max: 54.15
+  # Danger zones (30m from goal, central channel)
+  danger_zone_a:
+    x_min: 75.0
+    x_max: 105.0
+    y_min: 14.0
+    y_max: 54.0
+  danger_zone_b:
+    x_min: 0.0
+    x_max: 30.0
+    y_min: 14.0
+    y_max: 54.0
+  # Goal mouths
+  goal_mouth_a:
+    x_min: 104.0
+    x_max: 105.0
+    y_min: 30.34
+    y_max: 37.66
+  goal_mouth_b:
+    x_min: 0.0
+    x_max: 1.0
+    y_min: 30.34
+    y_max: 37.66
+  # Corner zones (4 corners)
+  corner_top_left:
+    x_min: 0.0
+    x_max: 5.0
+    y_min: 63.0
+    y_max: 68.0
+  corner_top_right:
+    x_min: 100.0
+    x_max: 105.0
+    y_min: 63.0
+    y_max: 68.0
+  corner_bottom_left:
+    x_min: 0.0
+    x_max: 5.0
+    y_min: 0.0
+    y_max: 5.0
+  corner_bottom_right:
+    x_min: 100.0
+    x_max: 105.0
+    y_min: 0.0
+    y_max: 5.0
+
+# Goal dimensions
+goals:
+  width_m: 7.32
+  depth_m: 2.44
+  goal_line_y_a: 30.34
+  goal_line_y_b: 37.66

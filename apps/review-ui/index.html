@@ -154,9 +154,13 @@ input[type=file]{display:none}
 
     <!-- Detection Grid -->
     <div class="det-grid">
-      <div class="det-item players">
-        <div class="num" id="detPlayers">0</div>
-        <div class="label">检测球员</div>
+      <div class="det-item" style="background:var(--card2);border-left:3px solid var(--red)">
+        <div class="num" id="detPlayersA" style="color:var(--red)">0</div>
+        <div class="label">A队球员(白衣)</div>
+      </div>
+      <div class="det-item" style="background:var(--card2);border-left:3px solid var(--accent2)">
+        <div class="num" id="detPlayersB" style="color:var(--accent2)">0</div>
+        <div class="label">B队球员(蓝衣)</div>
       </div>
       <div class="det-item ball">
         <div class="num" id="detBall">-</div>
@@ -165,10 +169,6 @@ input[type=file]{display:none}
       <div class="det-item poss">
         <div class="num" id="detPoss">50%</div>
         <div class="label">控球率 A</div>
-      </div>
-      <div class="det-item atk">
-        <div class="num" id="detAtk">0</div>
-        <div class="label">总进攻</div>
       </div>
     </div>
 
@@ -302,11 +302,11 @@ function updateDashboard(point) {
     document.getElementById(`sb_b_${s.keyB}`).style.width = (vb / maxV * 100) + '%';
   });
 
-  // Detection grid
-  document.getElementById('detPlayers').textContent = point.players;
+  // Detection grid — per-team player counts
+  document.getElementById('detPlayersA').textContent = point.players_a || Math.round(point.players * 0.25);
+  document.getElementById('detPlayersB').textContent = point.players_b || Math.round(point.players * 0.75);
   document.getElementById('detBall').textContent = point.ball ? '✅ 检出' : '❌ 未检出';
   document.getElementById('detPoss').textContent = point.poss_a + '%';
-  document.getElementById('detAtk').textContent = point.atk_a + point.atk_b;
 
   // Scoreboard
   document.getElementById('clockDisplay').textContent = `⏱ ${formatTime(point.time_s)} / ${formatTime(timeline[timeline.length-1]?.time_s || 0)}`;
